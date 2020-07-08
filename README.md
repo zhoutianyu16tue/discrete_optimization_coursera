@@ -1,6 +1,6 @@
 # discrete_optimization_coursera
 ## Knapsack
-- branch and bounding
+- Branch and Bounding
 ## Graph Coloring
 - Local Search
 ## Travelling Salesman Problem
