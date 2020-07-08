@@ -1,0 +1,8 @@
+*.pdf
+*.pyc
+*__pycache__
+*data
+*_coursera
+*.ipynb_checkpoints
+*sol
+*test
