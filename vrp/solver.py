@@ -43,6 +43,62 @@ def calc_route_cost(route, points):
 
     return cost
 
+def three_opt(solution, obj, points):
+
+    nodeCount = len(solution)
+    best_dist = obj
+    best_route = solution
+    swapped = True
+    while swapped:
+        swapped = False
+        for i in range(nodeCount-2):
+            for j in range(i+1, nodeCount-1):
+                for k in range(j+1, nodeCount):
+
+                    d1 = length2(points[best_route[j-1]], points[best_route[j]])
+                    d2 = length2(points[best_route[k-1]], points[best_route[k]])
+                    d3 = length2(points[best_route[i-1]], points[best_route[i]])
+                    d_sum = d1+d2+d3
+
+                    d_case_1 = length2(points[best_route[j-1]], points[best_route[k-1]]) + \
+                                length2(points[best_route[j]], points[best_route[i-1]]) + \
+                                length2(points[best_route[k]], points[best_route[i]])
+
+                    d_case_2 = length2(points[best_route[j-1]], points[best_route[k]]) + \
+                                length2(points[best_route[j]], points[best_route[i-1]]) + \
+                                length2(points[best_route[k-1]], points[best_route[i]])
+
+                    d_case_3 = length2(points[best_route[j-1]], points[best_route[k]]) + \
+                                length2(points[best_route[k-1]], points[best_route[i-1]]) + \
+                                length2(points[best_route[j]], points[best_route[i]])
+
+                    d_case_4 = length2(points[best_route[j-1]], points[best_route[i-1]]) + \
+                                length2(points[best_route[k]], points[best_route[j]]) + \
+                                length2(points[best_route[k-1]], points[best_route[i]])
+
+                    candidate_case = min([("case1", d_case_1-d_sum), ("case2", d_case_2-d_sum), \
+                     ("case3", d_case_3-d_sum), ("case4", d_case_3-d_sum)], key=lambda t:t[1])
+
+                    if candidate_case[1] >= -10e-4:
+                        continue
+
+                    A, B, C = best_route[i:j], best_route[j:k], np.append(best_route[k:], best_route[:i])
+
+                    if candidate_case[0] == "case1":
+                        best_route = np.concatenate((A, np.flip(B), np.flip(C)))
+                    elif candidate_case[0] == "case2":
+                        best_route = np.concatenate((A, C, B))
+                    elif candidate_case[0] == "case3":
+                        best_route = np.concatenate((A, C, np.flip(B)))
+                    else:
+                        assert candidate_case[0] == "case4"
+                        best_route = np.concatenate((A, np.flip(C), B))
+
+                    best_dist += candidate_case[1]
+                    swapped = True
+
+    return best_route, best_dist
+
 def two_opt(customers):
 
     nodeCount = len(customers)
@@ -74,7 +130,8 @@ def two_opt(customers):
         # print("re-entry")
         # print(inner_break, outer_break, best_dist)
     # print("Returning from two_opt")
-    return best_route[:-1], best_dist
+    # return best_route[:-1], best_dist
+    return three_opt(best_route[:-1], best_dist, points)
 
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
@@ -94,43 +151,59 @@ def solve_it(input_data):
         # print "Start Vehicle: ",v
         vehicle_tours.append([])
         capacity_remaining = vehicle_capacity
-        while sum([capacity_remaining >= customer.demand for customer in remaining_customers]) > 0:
-            used = set()
-            order = sorted(remaining_customers, key=lambda customer: -customer.demand*customer_count + customer.index)
-            for customer in order:
-                if capacity_remaining >= customer.demand:
-                    capacity_remaining -= customer.demand
-                    vehicle_tours[v].append(customer)
-                    # print '   add', ci, capacity_remaining
-                    used.add(customer)
-            remaining_customers -= used
+        curr_pos = depot
+
+        while capacity_remaining >= 0 and len(remaining_customers) > 0:
+            customer_by_dist = sorted([(length(curr_pos, c), c) for c in remaining_customers], key=lambda t:t[0])
+            # print(customer_by_dist)
+            # print("remaining_customers", len(remaining_customers))
+            # print("capacity_remaining", capacity_remaining)
+            found = False
+            for _, customer in customer_by_dist:
+                if customer.demand <= capacity_remaining:
+                    found = True
+                    break
+
+            if not found:
+                break
+            curr_pos = customer
+            capacity_remaining -= customer.demand
+            remaining_customers -= set([customer])
+            vehicle_tours[v].append(customer)
+
+        # while sum([capacity_remaining >= customer.demand for customer in remaining_customers]) > 0:
+        #     used = set()
+        #     order = sorted(remaining_customers, key=lambda customer: -customer.demand*customer_count + customer.index)
+        #     print(order)
+        #     for customer in order:
+        #         if capacity_remaining >= customer.demand:
+        #             capacity_remaining -= customer.demand
+        #             vehicle_tours[v].append(customer)
+        #             # print '   add', ci, capacity_remaining
+        #             used.add(customer)
+        #     remaining_customers -= used
 
     # checks that the number of customers served is correct
-    assert sum([len(v) for v in vehicle_tours]) == len(customers) - 1
-
-    # calculate the cost of the solution; for each vehicle the length of the route
-    obj = 0
-    for v in range(0, vehicle_count):
-        vehicle_tour = vehicle_tours[v]
-        if len(vehicle_tour) > 0:
-            obj += length(depot,vehicle_tour[0])
-            for i in range(0, len(vehicle_tour)-1):
-                obj += length(vehicle_tour[i],vehicle_tour[i+1])
-            obj += length(vehicle_tour[-1],depot)
+    print(len(vehicle_tours))
+    print(sum([len(v) for v in vehicle_tours]))
+    print(customer_count)
+    # assert sum([len(v) for v in vehicle_tours]) == len(customers) - 1
 
     # prepare the solution in the specified output format
-    
     obj_opt = 0
     outputData = ""
     for v in range(0, vehicle_count):
 
         curr_tour = vehicle_tours[v]
         if len(curr_tour) == 0:
+            print("un-used vehicle")
             outputData += "0 0\n"
             continue
 
         r1, c1 = two_opt([depot]+curr_tour)
-        assert r1[0] == 0
+        tour_start = np.argwhere(r1==0).flatten()[0]
+        r1 = np.append(r1[:tour_start], r1[tour_start:])
+        # print("route", v, c1)
         obj_opt += c1
         outputData += "0" + ' ' + ' '.join([str(i) for i in r1[1:]]) + ' ' + "0" + '\n'
 
