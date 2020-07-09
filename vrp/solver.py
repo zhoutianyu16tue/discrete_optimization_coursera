@@ -9,10 +9,8 @@ Customer = namedtuple("Customer", ['index', 'demand', 'x', 'y'])
 def length(customer1, customer2):
     return math.sqrt((customer1.x - customer2.x)**2 + (customer1.y - customer2.y)**2)
 
-def solve_it(input_data):
-    # Modify this code to run your optimization algorithm
-
-    # parse the input
+def process_input(input_data):
+        # parse the input
     lines = input_data.split('\n')
 
     parts = lines[0].split()
@@ -27,7 +25,14 @@ def solve_it(input_data):
         customers.append(Customer(i-1, int(parts[0]), float(parts[1]), float(parts[2])))
 
     #the depot is always the first customer in the input
-    depot = customers[0] 
+    depot = customers[0]
+    return depot, customers, customer_count, vehicle_count, vehicle_capacity
+
+def solve_it(input_data):
+    # Modify this code to run your optimization algorithm
+
+    depot, customers, customer_count, vehicle_count, vehicle_capacity = \
+        process_input(input_data)
 
 
     # build a trivial solution
