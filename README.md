@@ -7,8 +7,7 @@
 
 ## Travelling Salesman Problem
 - Local Search
-- 2-OPT
-- 3-OPT
+- 2-OPT and 3-OPT
 
 ## Facility Location
 - Local Search
