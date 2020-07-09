@@ -15,4 +15,5 @@
 - Large Neighborhood Search
 
 ## Vehicle Routing Problem
-- 2-OPT on vehicle routes
+- Greedy Heuristics
+- 2-OPT and 3-OPT on vehicle routes
