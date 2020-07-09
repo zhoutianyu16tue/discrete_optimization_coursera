@@ -3,6 +3,7 @@
 
 import math
 from collections import namedtuple
+import numpy as np
 
 Customer = namedtuple("Customer", ['index', 'demand', 'x', 'y'])
 
@@ -27,6 +28,53 @@ def process_input(input_data):
     #the depot is always the first customer in the input
     depot = customers[0]
     return depot, customers, customer_count, vehicle_count, vehicle_capacity
+
+def length2(p1, p2):
+    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+def calc_route_cost(route, points):
+
+    assert len(route) == len(points)
+    cost = 0
+    for i in range(len(route)-1):
+        cost += length2(points[route[i]], points[route[i+1]])
+
+    cost += length2(points[route[-1]], points[route[0]])
+
+    return cost
+
+def two_opt(customers):
+
+    nodeCount = len(customers)
+    solution = [c.index for c in customers]
+    points = {c.index:(c.x, c.y) for c in customers}
+
+    best_dist = calc_route_cost(solution, points)
+    best_route = np.append(solution, solution[0])
+    # print("=" * 25)
+    # print("Before opt", best_dist)
+    swapped = True
+    while swapped:
+        swapped = False
+        for i in range(nodeCount-1):
+            for j in range(i+1, nodeCount):
+                d1 = length2(points[best_route[i]], points[best_route[i+1]])
+                d2 = length2(points[best_route[j]], points[best_route[j+1]])
+                d1_new = length2(points[best_route[i]], points[best_route[j]])
+                d2_new = length2(points[best_route[i+1]], points[best_route[j+1]])
+
+                if d1_new + d2_new >= d1 + d2:
+                    continue
+
+                best_route[i+1:j+1] = np.flip(best_route[i+1:j+1])
+                best_dist += (d1_new + d2_new - d1 - d2)
+                swapped = True
+                # print("Current best", best_dist)
+
+        # print("re-entry")
+        # print(inner_break, outer_break, best_dist)
+    # print("Returning from two_opt")
+    return best_route[:-1], best_dist
 
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
@@ -71,10 +119,22 @@ def solve_it(input_data):
             obj += length(vehicle_tour[-1],depot)
 
     # prepare the solution in the specified output format
-    outputData = '%.2f' % obj + ' ' + str(0) + '\n'
+    
+    obj_opt = 0
+    outputData = ""
     for v in range(0, vehicle_count):
-        outputData += str(depot.index) + ' ' + ' '.join([str(customer.index) for customer in vehicle_tours[v]]) + ' ' + str(depot.index) + '\n'
 
+        curr_tour = vehicle_tours[v]
+        if len(curr_tour) == 0:
+            outputData += "0 0\n"
+            continue
+
+        r1, c1 = two_opt([depot]+curr_tour)
+        assert r1[0] == 0
+        obj_opt += c1
+        outputData += "0" + ' ' + ' '.join([str(i) for i in r1[1:]]) + ' ' + "0" + '\n'
+
+    outputData = '%.2f' % obj_opt + ' ' + str(0) + '\n' + outputData
     return outputData
 
 
